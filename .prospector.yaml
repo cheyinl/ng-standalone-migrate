@@ -1,0 +1,22 @@
+autodetect: false
+
+ignore-paths:
+  - dist
+  - docs
+  - rt_sandbox
+  - rt-sandbox
+  - .rt-deps
+
+pylint:
+  disable:
+    - keyword-arg-before-vararg
+  options:
+    indent-string: "\t"
+
+pep8:
+  disable:
+    - E131
+
+mccabe:
+  options:
+    max-complexity: 20
