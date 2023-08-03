@@ -337,7 +337,7 @@ def walk_folder(trap_work_factory: TrapWorkFactory, target_folder: str) -> None:
 			else:
 				_log.info('imports: =empty=')
 			if ann_imports:
-				_log.info("annotation-imports: ---\n%s\n---", "\n".join(ann_imports))
+				_log.info("annotation-imports: ---\n%s\n---", "\n".join(map(lambda x: (x + "," if x else x), ann_imports)))
 			else:
 				_log.info('annotation-imports: =empty=')
 		for dname in STOP_FOLDERS:
