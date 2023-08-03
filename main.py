@@ -15,6 +15,8 @@ ImportDefSetting = namedtuple('ImportDefSetting', ('cluster_index', 'import_stmt
 IMPORT_DEFS = {
 		'common':
 				ImportDefSetting(0, (r"import { CommonModule } from '@angular/common';", )),
+		'router':
+				ImportDefSetting(0, (r"import { RouterModule } from '@angular/router';", )),
 		'form':
 				ImportDefSetting(0, (r"import { FormsModule } from '@angular/forms';", )),
 		'reactiveform':
@@ -114,6 +116,9 @@ MODULE_TRAPS_HTML = {
 		'ngSwitch': 'common',
 		'ngModel': 'form',
 		'formGroup': 'reactiveform',
+		'router-outlet': 'router',
+		'routerLink': 'router',
+		'routerLinkActive': 'router',
 		'mat-autocomplete': 'autocomplete',
 		'matBadge': 'badge',
 		'button': 'button',
