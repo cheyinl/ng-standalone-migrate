@@ -411,15 +411,32 @@ def scan_folder_n_expand_traps(target_folder: str) -> None:
 	_log.info("*** -- scan_folder_n_expand_traps completed: modified_traps=%r", modified_traps)
 
 
+_HELP_TEXT = """
+Argument: [Options] [FOLDER_PATH]...
+
+Options:
+	--scan-component
+		Enable component definition scan.
+	-v
+		Set logging level to DEBUG for more verbose logs.
+	--help | -h
+		Show this message.
+
+""".replace("\t", "    ")
+
+
 def parse_param() -> Tuple[Any, bool, Iterable[str]]:
 	log_level = logging.INFO
 	scan_component = False
 	target_folders = []
 	for arg in sys.argv[1:]:
-		if arg == '-v':
-			log_level = logging.DEBUG
-		elif arg == '--scan-component':
+		if arg == '--scan-component':
 			scan_component = True
+		elif arg == '-v':
+			log_level = logging.DEBUG
+		elif arg in ('--help', '-h'):
+			print(_HELP_TEXT)
+			raise SystemExit(1)
 		else:
 			arg = os.path.abspath(arg)
 			target_folders.append(arg)
@@ -432,7 +449,7 @@ def parse_param() -> Tuple[Any, bool, Iterable[str]]:
 
 def main():
 	if len(sys.argv) < 2:
-		print('Argument: [FOLDER_PATH]...')
+		print(_HELP_TEXT)
 		raise SystemExit(1)
 	log_level, scan_component, target_folders = parse_param()
 	logging.basicConfig(level=log_level, stream=sys.stderr)
