@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Any, Dict, Tuple, Iterable, Optional
+from typing import Any, Dict, Tuple, Iterable, Optional, Set
 
 from collections import namedtuple
 import sys
@@ -324,7 +324,51 @@ def extract_module_requirement(trap_work_factory: TrapWorkFactory, path_html: st
 	return trap_work.export_import_code()
 
 
-def walk_folder(trap_work_factory: TrapWorkFactory, target_folder: str) -> None:
+COMPONENT_IMPORTS_TRAP0 = re.compile(r'@Component\(')
+COMPONENT_IMPORTS_TRAP1 = re.compile(r"""\s*imports:\s*\[([^\]]*)(\]\s*,)?""")
+COMPONENT_IMPORTS_TRAP2 = re.compile(r"""([^\]]*)\]\s*,\s*$""")
+
+
+def extract_existed_component_imports(path_ts: str) -> Set[str]:
+	result = set()
+	with open(path_ts, 'r', encoding='utf-8') as fp:
+		state = 0
+		for line in fp:
+			code_imports = ''
+			if state == 0:
+				m = COMPONENT_IMPORTS_TRAP0.match(line)
+				if m:
+					state = 1
+			elif state == 1:
+				m = COMPONENT_IMPORTS_TRAP1.match(line)
+				if m:
+					state = 3 if m.group(2) else 2
+					code_imports = m.group(1)
+			elif state == 2:
+				m = COMPONENT_IMPORTS_TRAP2.match(line)
+				if m:
+					state = 3
+					code_imports = m.group(1)
+				else:
+					code_imports = line
+			if code_imports:
+				result.update(filter(None, map(lambda x: x.strip(), code_imports.split(','))))
+			if state == 3:
+				break
+	return result
+
+
+def check_existed_component_imports(path_ts: str, ann_imports: Iterable[str]) -> None:
+	existed_imports = extract_existed_component_imports(path_ts)
+	_log.info("-- found existed imports (%d): {%s}", len(existed_imports), ', '.join(sorted(existed_imports)))
+	for expect_import in ann_imports:
+		if not expect_import:
+			continue
+		if expect_import not in existed_imports:
+			_log.warning('-- !!!### missing import: [%s]', expect_import)
+
+
+def walk_folder(trap_work_factory: TrapWorkFactory, target_folder: str, check_imports: bool) -> None:
 	for dirpath, dirnames, filenames in os.walk(target_folder):
 		filenames.sort()
 		for fname in filenames:
@@ -347,6 +391,8 @@ def walk_folder(trap_work_factory: TrapWorkFactory, target_folder: str) -> None:
 				_log.info("annotation-imports: ---\n%s\n---", "\n".join(map(lambda x: (x + "," if x else x), ann_imports)))
 			else:
 				_log.info('annotation-imports: =empty=')
+			if check_imports:
+				check_existed_component_imports(path_ts, ann_imports)
 		for dname in STOP_FOLDERS:
 			if dname in dirnames:
 				dirnames.remove(dname)
@@ -437,13 +483,16 @@ Options:
 """.replace("\t", "    ")
 
 
-def parse_param() -> Tuple[Any, bool, Iterable[str]]:
+def parse_param() -> Tuple[Any, bool, bool, Iterable[str]]:
 	log_level = logging.INFO
 	scan_component = False
+	check_imports = False
 	target_folders = []
 	for arg in sys.argv[1:]:
 		if arg == '--scan-component':
 			scan_component = True
+		elif arg == '--check-imports':
+			check_imports = True
 		elif arg == '-v':
 			log_level = logging.DEBUG
 		elif arg in ('--help', '-h'):
@@ -455,6 +504,7 @@ def parse_param() -> Tuple[Any, bool, Iterable[str]]:
 	return (
 			log_level,
 			scan_component,
+			check_imports,
 			target_folders,
 	)
 
@@ -463,7 +513,7 @@ def main():
 	if len(sys.argv) < 2:
 		print(_HELP_TEXT)
 		raise SystemExit(1)
-	log_level, scan_component, target_folders = parse_param()
+	log_level, scan_component, check_imports, target_folders = parse_param()
 	logging.basicConfig(level=log_level, stream=sys.stderr)
 	_update_def_cluster_index_bound()
 	if scan_component:
@@ -472,7 +522,7 @@ def main():
 	_log.debug('DEF_CLUSTER_INDEX_BOUND = %d', DEF_CLUSTER_INDEX_BOUND)
 	trap_work_factory = prepare_traps()
 	for target_path in target_folders:
-		walk_folder(trap_work_factory, target_path)
+		walk_folder(trap_work_factory, target_path, check_imports)
 
 
 if __name__ == '__main__':
